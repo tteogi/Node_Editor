@@ -200,6 +200,13 @@ namespace NodeEditorFramework
 				NodeEditorGUI.DrawConnection (startPos, endDir, endPos, NodeEditorGUI.GetSecondConnectionVector (startPos, endPos, endDir), output.typeData.col);
 				RepaintClients ();
 			}
+			if (curEditorState.makeTransition != null)
+			{ // Draw the currently made transition
+				RTEditorGUI.DrawLine (curEditorState.makeTransition.rect.center + curEditorState.zoomPanAdjust, 
+				                      ScreenToGUIPos (mousePos) + curEditorState.zoomPos * curEditorState.zoom,
+				                      Color.grey, null, 3); 
+				RepaintClients ();
+			}
 
 			// Push the active node at the bottom of the draw order.
 			if (Event.current.type == EventType.Layout && curEditorState.selectedNode != null)
@@ -212,6 +219,7 @@ namespace NodeEditorFramework
 			for (int nodeCnt = 0; nodeCnt < curNodeCanvas.nodes.Count; nodeCnt++)  
 			{
 				Node node = curNodeCanvas.nodes [nodeCnt];
+				node.DrawTransitions ();
 				node.DrawConnections ();
 			}
 
@@ -381,6 +389,11 @@ namespace NodeEditorFramework
 						GenericMenu menu = new GenericMenu ();
 						menu.AddItem (new GUIContent ("Delete Node"), false, ContextCallback, new NodeEditorMenuCallback ("deleteNode", curNodeCanvas, curEditorState));
 						menu.AddItem (new GUIContent ("Duplicate Node"), false, ContextCallback, new NodeEditorMenuCallback ("duplicateNode", curNodeCanvas, curEditorState));
+						if (curEditorState.focusedNode.AcceptsTranstitions)
+						{
+							menu.AddSeparator ("Seperator");
+							menu.AddItem (new GUIContent ("Make Transition"), false, ContextCallback, new NodeEditorMenuCallback ("startTransition", curNodeCanvas, curEditorState));
+						}
 						menu.ShowAsContext ();
 						e.Use ();
 					}
@@ -399,6 +412,7 @@ namespace NodeEditorFramework
 							NodeInput nodeInput = curEditorState.focusedNode.GetInputAtPos (e.mousePosition);
 							if (nodeInput != null && nodeInput.connection != null)
 							{ // Input clicked -> Loose and edit Connection
+								// TODO: Draw input from NodeInput
 								curEditorState.connectOutput = nodeInput.connection;
 								nodeInput.RemoveConnection ();
 								e.Use();
@@ -428,6 +442,14 @@ namespace NodeEditorFramework
 								}
 							}
 						}
+						else if (curEditorState.makeTransition != null && curEditorState.makeTransition.AcceptsTranstitions) 
+						{ // A transition is drawn, so provide a context menu with nodes to auto-connect
+							foreach (Node node in NodeTypes.nodes.Keys)
+							{ // Iterate through all nodes and check for compability
+								if (node.AcceptsTranstitions)
+									menu.AddItem (new GUIContent ("Add " + NodeTypes.nodes[node].adress), false, ContextCallback, new NodeEditorMenuCallback (node.GetID, curNodeCanvas, curEditorState));
+							}
+						}
 						else 
 						{ // Ordinary context click, add all nodes to add
 							foreach (Node node in NodeTypes.nodes.Keys)
@@ -443,7 +465,11 @@ namespace NodeEditorFramework
 			case EventType.MouseUp:
 
 				if (curEditorState.focusedNode != null) 
-				{ // Apply Drawn connections on node
+				{ // Apply Drawn connections/transition on node
+					if (curEditorState.makeTransition != null)
+					{ // Apply a connection if theres a clicked input
+						Transition.Create (curEditorState.makeTransition, curEditorState.focusedNode);
+					}
 					if (curEditorState.connectOutput != null) 
 					{ // Apply a connection if theres a clicked input
 						if (!curEditorState.focusedNode.Outputs.Contains (curEditorState.connectOutput)) 
@@ -458,6 +484,7 @@ namespace NodeEditorFramework
 					}
 				}
 
+				curEditorState.makeTransition = null;
 				curEditorState.connectOutput = null;
 				curEditorState.dragNode = false;
 				curEditorState.panWindow = false;
@@ -581,11 +608,23 @@ namespace NodeEditorFramework
 
 					curEditorState.focusedNode = duplicatedNode;
 					curEditorState.dragNode = true;
+					curEditorState.makeTransition = null;
 					curEditorState.connectOutput = null;
 					curEditorState.panWindow = false;
 				}
 				break;
-			
+
+			case "startTransition": // Starting a new transition
+				if (curEditorState.focusedNode != null) 
+				{
+					curEditorState.makeTransition = curEditorState.focusedNode;
+					curEditorState.connectOutput = null;
+				}
+				curEditorState.dragNode = false;
+				curEditorState.panWindow = false;
+
+				break;
+
 			default: // Node creation request
 				Node node = Node.Create (callback.message, ScreenToGUIPos (callback.contextClickPos));
 
@@ -601,7 +640,12 @@ namespace NodeEditorFramework
 						}
 					}
 				}
+				else if (node.AcceptsTranstitions && curEditorState.makeTransition != null) 
+				{
+					Transition.Create (curEditorState.makeTransition, node);
+				}
 
+				curEditorState.makeTransition = null;
 				curEditorState.connectOutput = null;
 				curEditorState.dragNode = false;
 				curEditorState.panWindow = false;
@@ -630,6 +674,128 @@ namespace NodeEditorFramework
 		#endregion
 
 		#region Calculation
+
+		// STATE SYSTEM:
+
+		private static List<NodeCanvas> transitioningNodeCanvases = new List<NodeCanvas> ();
+
+		/// <summary>
+		/// Begins to transition the passed nodeCanvas from beginNode
+		/// </summary>
+		public static void BeginTransitioning (NodeCanvas nodeCanvas, Node beginNode) 
+		{
+			if (!nodeCanvas.nodes.Contains (beginNode)) 
+				throw new UnityException ("Node to begin transitioning from has to be associated with the passed NodeEditorState!");
+
+			nodeCanvas.currentNode = beginNode;
+			nodeCanvas.currentTransition = null;
+			if (!transitioningNodeCanvases.Contains (nodeCanvas))
+				transitioningNodeCanvases.Add (nodeCanvas);
+
+			RepaintClients ();
+
+//			Debug.Log ("Beginning transitioning " + nodeCanvas.name + " from Node " + beginNode.name);
+			nodeCanvas.currentNode.OnEnter (null);
+
+		#if UNITY_EDITOR
+			NEUpdate -= UpdateTransitions;
+			NEUpdate += UpdateTransitions;
+		#endif
+		}
+
+		/// <summary>
+		/// Stops the transitioning process of the passed nodeCanvas
+		/// </summary>
+		public static void StopTransitioning (NodeCanvas nodeCanvas) 
+		{
+			if (nodeCanvas == null)
+				return;
+			if (transitioningNodeCanvases.Contains (nodeCanvas))
+				transitioningNodeCanvases.Remove (nodeCanvas);
+		#if UNITY_EDITOR
+			if (transitioningNodeCanvases.Count == 0)
+				NEUpdate -= UpdateTransitions;
+		#endif	
+//			Debug.Log ("Stopped transitioning " + nodeCanvas.name + (nodeCanvas.currentNode != null? (" at Node " + nodeCanvas.currentNode.name) : ""));
+			if (nodeCanvas.currentTransition != null)
+			{
+				nodeCanvas.currentTransition.stopTransition ();
+				nodeCanvas.currentTransition = null;
+			}
+			RepaintClients ();
+		}
+
+		/// <summary>
+		/// Updates the transitions.
+		/// </summary>
+		private static void UpdateTransitions () 
+		{
+			for (int cnt = 0; cnt < transitioningNodeCanvases.Count; cnt++)
+			{
+				NodeCanvas nodeCanvas = transitioningNodeCanvases[cnt];
+				if (!nodeCanvas.currentNode.AcceptsTranstitions || nodeCanvas.currentNode.transitions.Count == 0) 
+				{ // Error - this node should not have any transitions, in or out
+					StopTransitioning (nodeCanvas);
+					cnt--;
+//					Debug.Log ("Stopped transitioning because the current node has no transitions anymore!");
+					continue;
+				}
+
+				if (nodeCanvas.currentTransition != null) 
+				{ // We currently transition to another node, so we check the progress
+					RepaintClients (); // Keep Transition GUI Updated
+					if (nodeCanvas.currentTransition.finishedTransition ())
+					{
+//						Debug.Log ("Finished Transition from " + nodeCanvas.currentTransition.startNode.name + " to " + nodeCanvas.currentTransition.endNode.name + "!");
+						nodeCanvas.currentTransition.startNode.OnLeave (nodeCanvas.currentTransition);
+						nodeCanvas.currentTransition.endNode.OnEnter (nodeCanvas.currentTransition);
+
+						nodeCanvas.currentNode = nodeCanvas.currentTransition.endNode;
+						nodeCanvas.currentTransition = null;
+					}
+//					else
+//						Debug.Log ("Transitioning from " + nodeCanvas.currentTransition.startNode.name + " to " + nodeCanvas.currentTransition.endNode.name + "! Progress: " + nodeCanvas.currentTransition.transitionProgress ());
+					continue;
+				}
+
+				// Nothing is transitioning right now, so we check if we can transition any further
+				Transition nextTransition = GetNextTransition (nodeCanvas.currentNode);
+				if (nextTransition != null && nextTransition.startNode == nodeCanvas.currentNode) // Starting to transition to the next node through nextTransition
+				{
+//					Debug.Log ("Starting to stransition from " + nextTransition.startNode.name + " to " + nextTransition.endNode.name);
+					nodeCanvas.currentTransition = nextTransition;
+					nextTransition.startTransition ();
+					RepaintClients ();
+				}
+//				else
+//					Debug.Log ("No Transitions which conditions were met found on Node " + nodeCanvas.currentNode.name + "!");
+			}
+		}
+
+		/// <summary>
+		/// Returns whether the passed canvas is in the transitioning process
+		/// </summary>
+		public static bool isTransitioning (NodeCanvas nodeCanvas) 
+		{
+			return transitioningNodeCanvases.Contains (nodeCanvas);
+		}
+
+
+		/// <summary>
+		/// Returns the first transition of the node that has it's conditions met
+		/// </summary>
+		private static Transition GetNextTransition (Node node) 
+		{
+			for (int transCnt = 0; transCnt < node.transitions.Count; transCnt++) 
+			{
+				Transition trans = node.transitions[transCnt];
+				if (trans.startNode == node && trans.conditionsMet ()) 
+					return trans;
+			}
+			return null;
+		}
+
+		// CALCULATION SYSTEM:
 		
 		// A list of Nodes from which calculation originates -> Call StartCalculation
 		public static List<Node> workList;

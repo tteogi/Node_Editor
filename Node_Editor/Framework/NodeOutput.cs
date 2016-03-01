@@ -2,6 +2,7 @@
 using UnityEngine.Serialization;
 using System;
 using System.Collections.Generic;
+using NodeEditorFramework.Utilities;
 
 namespace NodeEditorFramework 
 {
@@ -136,9 +137,9 @@ namespace NodeEditorFramework
 		{
 			CheckType ();
 			if (typeof(T).IsAssignableFrom (typeData.Type))
-				return (T)(value?? (value = GetDefault<T> ()));
+				return (T)(value?? (value = TypeSelector.GetDefault<T> ()));
 			Debug.LogError ("Trying to GetValue<" + typeof(T).FullName + "> for Output Type: " + typeData.Type.FullName);
-			return GetDefault<T> ();
+			return TypeSelector.GetDefault<T> ();
 		}
 		
 		/// <summary>
@@ -161,28 +162,7 @@ namespace NodeEditorFramework
 			value = null;
 		}
 		
-		/// <summary>
-		/// Returns the default value of type when a default constructor is existant or type is a value type, else null
-		/// </summary>
-		public static T GetDefault<T> ()
-		{
-			// Try to create using an empty constructor if existant
-			if (typeof(T).GetConstructor (System.Type.EmptyTypes) != null)
-				return System.Activator.CreateInstance<T> ();
-			// Else try to get default. Returns null only on reference types
-			return default(T);
-		}
 
-		/// <summary>
-		/// Returns the default value of type when a default constructor is existant, else null
-		/// </summary>
-		public static object GetDefault (Type type)
-		{
-			// Try to create using an empty constructor if existant
-			if (type.GetConstructor (System.Type.EmptyTypes) != null)
-				return System.Activator.CreateInstance (type);
-			return null;
-		}
 
 		#endregion
 	}

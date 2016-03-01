@@ -137,4 +137,14 @@ namespace NodeEditorFramework
 		public string OutputKnob_TexPath { get { return "Textures/Out_Knob.png"; } }
 		public Type Type { get { return typeof(float); } }
 	}
+
+	// TODO: Node Editor: Built-In Connection Types
+	public class ObjectType : ITypeDeclaration 
+	{
+		public string name { get { return "Object"; } }
+		public Color col { get { return Color.green; } }
+		public string InputKnob_TexPath { get { return "Textures/In_Knob.png"; } }
+		public string OutputKnob_TexPath { get { return "Textures/Out_Knob.png"; } }
+		public Type Type { get { return typeof(object); } }
+	}
 }

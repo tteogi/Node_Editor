@@ -25,6 +25,9 @@ namespace NodeEditorFramework
 		[HideInInspector]
 		[NonSerialized]
 		internal bool calculated = true;
+		
+		// State graph
+		public List<Transition> transitions = new List<Transition> ();
 
 		#region General
 
@@ -69,6 +72,10 @@ namespace NodeEditorFramework
 			{ // Inputs/Outputs need specific treatment, unfortunately
 				if (nodeKnobs[knobCnt] != null)
 					DestroyImmediate (nodeKnobs[knobCnt], true);
+			}
+			for (int transCnt = 0; transCnt < transitions.Count; transCnt++) 
+			{
+				transitions [transCnt].Delete ();
 			}
 			DestroyImmediate (this, true);
 		}
@@ -140,6 +147,11 @@ namespace NodeEditorFramework
 		/// </summary>
 		public virtual bool ContinueCalculation { get { return true; } }
 
+		/// <summary>
+		/// Does this Node accepts Transitions?
+		/// </summary>
+		public virtual bool AcceptsTranstitions { get { return false; } }
+
         #endregion
 
 		#region Protected Callbacks
@@ -158,6 +170,23 @@ namespace NodeEditorFramework
 		/// Callback when the NodeOutput was assigned a new connection (the last in the list)
 		/// </summary>
 		protected internal virtual void OnAddOutputConnection (NodeOutput output) {}
+
+		/// <summary>
+		/// Callback when the Transition was created
+		/// </summary>
+		protected internal virtual void OnAddTransition (Transition transition) {}
+
+
+		/// <summary>
+		/// Callback when the this Node is being transitioned to. 
+		/// OriginTransition is the transition from which was transitioned to this node OR null if the transitioning process was started on this Node
+		/// </summary>
+		protected internal virtual void OnEnter (Transition originTransition) {}
+
+		/// <summary>
+		/// Callback when the this Node is transitioning to another Node through the passed Transition
+		/// </summary>
+		protected internal virtual void OnLeave (Transition transition) {}
 
 		#endregion
 
@@ -191,6 +220,10 @@ namespace NodeEditorFramework
 			Rect nodeRect = rect;
 			nodeRect.position += NodeEditor.curEditorState.zoomPanAdjust;
 			contentOffset = new Vector2 (0, 20);
+
+			// Mark the current transitioning node as such by outlining it
+			if (NodeEditor.curNodeCanvas.currentNode == this)
+				GUI.DrawTexture (new Rect (nodeRect.x-8, nodeRect.y-8, nodeRect.width+16, nodeRect.height+16), NodeEditorGUI.GUIBoxSelection);
 
 			// Create a headerRect out of the previous rect and draw it, marking the selected node as such by making the header bold
 			Rect headerRect = new Rect (nodeRect.x, nodeRect.y, nodeRect.width, contentOffset.y);
@@ -242,6 +275,18 @@ namespace NodeEditorFramework
 													input.GetDirection (),
 													output.typeData.col);
 				}
+			}
+		}
+		
+		/// <summary>
+		/// Draws the node transitions starting from this node
+		/// </summary>
+		public void DrawTransitions () 
+		{
+			for (int cnt = 0; cnt < transitions.Count; cnt++)
+			{
+				if (transitions[cnt].startNode == this)
+					transitions[cnt].DrawFromStartNode ();
 			}
 		}
 

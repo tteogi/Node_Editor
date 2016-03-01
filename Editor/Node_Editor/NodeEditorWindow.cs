@@ -76,6 +76,7 @@ namespace NodeEditorFramework
 
 			NodeEditorCallbacks.OnAddNode -= SaveNewNode;
 			NodeEditorCallbacks.OnAddNodeKnob -= SaveNewNodeKnob;
+			NodeEditorCallbacks.OnAddTransition -= SaveNewTransition;
 
 			// TODO: BeforeOpenedScene to save Cache, aswell as assembly reloads... 
 	#endif
@@ -107,6 +108,8 @@ namespace NodeEditorFramework
 			NodeEditorCallbacks.OnAddNode += SaveNewNode;
 			NodeEditorCallbacks.OnAddNodeKnob -= SaveNewNodeKnob;
 			NodeEditorCallbacks.OnAddNodeKnob += SaveNewNodeKnob;
+			NodeEditorCallbacks.OnAddTransition -= SaveNewTransition;
+			NodeEditorCallbacks.OnAddTransition += SaveNewTransition;
 
 			// TODO: BeforeOpenedScene to save Cache, aswell as assembly reloads... 
 	#endif
@@ -192,6 +195,9 @@ namespace NodeEditorFramework
 			if (GUILayout.Button ("Force Re-Init"))
 				NodeEditor.ReInit (true);
 			
+			if (NodeEditor.isTransitioning (mainNodeCanvas) && GUILayout.Button ("Stop Transitioning"))
+				NodeEditor.StopTransitioning (mainNodeCanvas);
+
 			NodeEditorGUI.knobSize = EditorGUILayout.IntSlider (new GUIContent ("Handle Size", "The size of the Node Input/Output handles"), NodeEditorGUI.knobSize, 12, 20);
 			mainEditorState.zoom = EditorGUILayout.Slider (new GUIContent ("Zoom", "Use the Mousewheel. Seriously."), mainEditorState.zoom, 0.6f, 2);
 
@@ -222,6 +228,12 @@ namespace NodeEditorFramework
 					NodeEditorSaveManager.AddSubAsset (so, knob);
 			}
 
+			foreach (Transition trans in node.transitions)
+			{
+				if (trans.startNode == node)
+					NodeEditorSaveManager.AddSubAsset (trans, node);
+			}
+
 			AssetDatabase.SaveAssets ();
 			AssetDatabase.Refresh ();
 		}
@@ -231,6 +243,18 @@ namespace NodeEditorFramework
 			NodeEditorSaveManager.AddSubAsset (knob, knob.body);
 			foreach (ScriptableObject so in knob.GetScriptableObjects ())
 				NodeEditorSaveManager.AddSubAsset (so, knob);
+		}
+
+		private void SaveNewTransition (Transition transition) 
+		{
+			CheckCurrentCache ();
+			if (!mainNodeCanvas.nodes.Contains (transition.startNode) || !mainNodeCanvas.nodes.Contains (transition.endNode))
+				throw new UnityException ("Cache system: Writing new Transition to save file failed as Node members are not part of the Cache!");
+			
+			NodeEditorSaveManager.AddSubAsset (transition, lastSessionPath);
+
+			AssetDatabase.SaveAssets ();
+			AssetDatabase.Refresh ();
 		}
 
 		private void SaveCache () 
@@ -302,6 +326,9 @@ namespace NodeEditorFramework
 		/// </summary>
 		public void LoadNodeCanvas (string path) 
 		{
+			// Else it will be stuck forever
+			NodeEditor.StopTransitioning (mainNodeCanvas);
+
 			// Load the NodeCanvas
 			mainNodeCanvas = NodeEditorSaveManager.LoadNodeCanvas (path, true);
 			if (mainNodeCanvas == null) 
@@ -341,6 +368,9 @@ namespace NodeEditorFramework
 		/// </summary>
 		public void NewNodeCanvas () 
 		{
+			// Else it will be stuck forever
+			NodeEditor.StopTransitioning (mainNodeCanvas);
+
 			// New NodeCanvas
 			mainNodeCanvas = CreateInstance<NodeCanvas> ();
 			mainNodeCanvas.name = "New Canvas";

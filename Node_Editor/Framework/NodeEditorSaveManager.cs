@@ -69,6 +69,11 @@ namespace NodeEditorFramework
 					foreach (ScriptableObject so in knob.GetScriptableObjects ())
 						AddSubAsset (so, knob);
 				}
+				foreach (Transition trans in node.transitions)
+				{
+					if (trans.startNode == node)
+						AddSubAsset (trans, node);
+				}
 			}
 
 			UnityEditor.AssetDatabase.SaveAssets ();
@@ -205,6 +210,7 @@ namespace NodeEditorFramework
 			editorState = Clone (editorState);
 			editorState.focusedNode = null;
 			editorState.selectedNode = null;
+			editorState.makeTransition = null;
 			editorState.connectOutput = null;
 		}
 
@@ -245,10 +251,26 @@ namespace NodeEditorFramework
 					foreach (ScriptableObject so in knob.GetScriptableObjects ())
 						AddClonedSO (allSOs, clonedSOs, so);
 				}
+
+				for (int transCnt = 0; transCnt < clonedNode.transitions.Count; transCnt++)
+				{ // Clone Transitions
+					Transition trans = clonedNode.transitions[transCnt];
+					if (trans.startNode == node)
+					{
+						AddClonedSO (allSOs, clonedSOs, trans);
+					}
+					else 
+					{
+						clonedNode.transitions.RemoveAt (transCnt);
+						transCnt--;
+					}
+				}
 			}
 
 			// Replace every reference to any of the initial SOs of the first list with the respective clones of the second list
 
+			nodeCanvas.currentNode = ReplaceSO (allSOs, clonedSOs, nodeCanvas.currentNode);
+			nodeCanvas.currentTransition = ReplaceSO (allSOs, clonedSOs, nodeCanvas.currentTransition);
 			for (int nodeCnt = 0; nodeCnt < nodeCanvas.nodes.Count; nodeCnt++) 
 			{ // Clone Nodes, structural content and additional scriptableObjects
 				Node node = nodeCanvas.nodes[nodeCnt];
@@ -273,6 +295,25 @@ namespace NodeEditorFramework
 							clonedNode.Outputs.Add (knob as NodeOutput);
 					}
 				}
+
+				for (int transCnt = 0; transCnt < clonedNode.transitions.Count; transCnt++)
+				{ // Clone transitions
+					Transition trans = clonedNode.transitions[transCnt];
+					if (trans.startNode != node)
+						continue;
+					trans = clonedNode.transitions[transCnt] = ReplaceSO (allSOs, clonedSOs, trans);
+					if (trans == null)
+					{
+						Debug.LogError ("Could not copy transition number " + transCnt + " of Node " + clonedNode.name + "!");
+						continue;
+					}
+
+					trans.startNode = ReplaceSO (allSOs, clonedSOs, trans.startNode);
+					trans.endNode = ReplaceSO (allSOs, clonedSOs, trans.endNode);
+
+					if (!compressed)
+						trans.endNode.transitions.Add (trans);
+				}
 			}
 
 			// Also create working copies for specified editorStates, if any
@@ -288,6 +329,7 @@ namespace NodeEditorFramework
 					state.canvas = nodeCanvas;
 					state.focusedNode = null;
 					state.selectedNode = state.selectedNode != null? ReplaceSO (allSOs, clonedSOs, state.selectedNode) : null;
+					state.makeTransition = null;
 					state.connectOutput = null;
 				}	
 			}

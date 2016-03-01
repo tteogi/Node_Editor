@@ -3,6 +3,8 @@ using UnityEngine.Serialization;
 using System;
 using System.Collections.Generic;
 
+using NodeEditorFramework.Utilities;
+
 namespace NodeEditorFramework
 {
 	/// <summary>
@@ -121,7 +123,7 @@ namespace NodeEditorFramework
 		/// </summary>
 		public T GetValue<T> ()
 		{
-			return connection != null? connection.GetValue<T> () : NodeOutput.GetDefault<T> ();
+			return connection != null? connection.GetValue<T> () : TypeSelector.GetDefault<T> ();
 		}
 
 		/// <summary>
