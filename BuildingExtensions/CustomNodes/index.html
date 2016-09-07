@@ -193,6 +193,7 @@ as described <a href="http://docs.unity3d.com/Manual/ScriptCompileOrderFolders.h
 <li>Create a new Node of your type using <code>CreateInstance</code> and assign it's property <code>rect</code> using the position parameter</li>
 <li>Add connections using <code>CreateInput</code>/<code>CreateOutput</code> or <code>NodeInput.Create</code>/<code>NodeOuput.Create</code> <em>[Params: name; type ID; side; position]</em></li>
 <li>Perform any other additional setup steps and return your created node</li>
+<li><strong>Important:</strong> Setup up your created Node object, NOT <code>this</code> object!</li>
 </ul>
 </li>
 <li>Method <code>NodeGUI</code> <em>[protected (internal) override]</em><ul>
