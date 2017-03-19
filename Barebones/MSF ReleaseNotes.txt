@@ -1,0 +1,72 @@
+-----------------------------------------
+------- Version: V1.03.2 (Micro release)
+
+Improvement: Introduced a "Quick Auth" prefab
+Improvement: Added a "SendPlayersAllGameProperties" field to GamesModule
+Improvement: Added a warning with a list of uninitialized modules (when dependencies fail)
+Improvement: Added a better overload method for game registration
+Improvement: Added an ability for clients to set their local chat channel (ChatModule.SetLocalChannel)
+Bug Fix: Fixed a bug, when WaitConnection gets called multiple times after reconnecting
+Bug Fix: Fixed manually starting Master Server
+Bug Fix: Chat bug fix
+
+-----------------------------------------
+------- Version: V1.03.1 (Micro release)
+
+Bug Fix: Fixed Android builds (when args list is returned as null)
+Bug Fix: Master Key
+Bug Fix: Default IP's are set to 127.0.0.1
+
+-----------------------------------------
+------- Version: V1.03
+
+More info: https://github.com/alvyxaz/barebones-masterserver/wiki/Updates
+
+I've added a private github repository, where you can get changes faster and track development
+process. Send me an e-mail or a PM, and I'll send you an invitation
+
+* Breaking Changes:
+
+Command line arguments:
+-bmStartDedicated -> -bmStartManual
+-bmStartUserCreated -> -bmStartSpawned ("user created" made sense originally, but not anymore)
+-bmInstanceId -> -bmSpawnId
+
+* Other Changes:
+New Feature: Spawner Inspector
+New Feature: MongoDB support
+New Feature: Logs wrapper for improved logging (just a first step towards proper logging)
+Improvement: MessageHelper.Create now accepts uNet messages (extensions of BaseMessage) - this means you can reek some of the benefits of automatic serialization, provided by uNet
+Improvement: IIncommingMessage.DeserializeMessage<BaseMessage type>() - deserializes uNet messages
+Bug Fix: EndianBinaryWriter string serialization fix*
+Bug Fix: Lobby map names are visible in the games list
+Improvement: Added more control for giving out accesses to game servers:
+   Added a new method to the interface IGameServer - ValidateAccessRequest - this will be called before giving an access to a user who requests it. Useful to do some custom checking for bans or other rules you might need
+   Added a new method to the interface IGameServer - FillAccessProperties - useful, in case you want to attach extra data to the access before sending it to the player
+Improvement: Spawner Queue sizes can now be changed via SpawnersModule - spawner queue is there to make sure people don't wait too long on a relatively busy server
+Improvement: RSA key size - can be changed via static BmSecurity.RsaKeySize field
+Improvement: Guest login can now be disabled via field AuthModule.EnableGuestLogin (inspector)
+Improvement: Added two methods to IObservableProperty - SerializeToString and DeserializeFromString - these can be used when writing custom database implementations, so that you can save data in human-readable formats (previously it was just binary)
+
+And a bunch of other things I forgot to note
+
+-----------------------------------------
+------- Version: V1.02
+
+New Feature: Game Lobbies
+Improvement: ChatModule improved to allow easier message type customization
+Improvement: Added an example to find a random game
+Bug Fix: Mac OS spawner server exe path fix
+Bug Fix: Websocket-sharp causes IDE Debugger to terminate socket connections
+Bug Fix: Fixed cases where spawned game server would receive 127.0.0.1 as it's public IP.
+Other: Editor warnings removed
+Other: A number of other tweaks I don't really remember
+
+-----------------------------------------
+------- Version: V1.01
+Additional Feature: Demo with player jumping from one game server to another
+Additional Feature: Message Encryption
+Improvement: Account Password Reset / E-mail confirmation
+Improvement: Auth encryption using RSA and AES
+Improvement: Spawners module improvements
+Improvement: Changes in files / folders hierarchy to make modules less coupled and easier to use

@@ -1,0 +1,11 @@
+This directory cointains code and resources of the demo's.
+
+* Online Documentation contains a short guide that 
+* explains how demo works
+
+MainDemo - contains the demonstration of main features
+
+MiniGame - this is a simple uNET game, which has nothing
+to do with the the framework. It's used in the tutorial
+
+MyGame - this is a result of following a tutorial
