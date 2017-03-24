@@ -12,8 +12,8 @@ namespace Barebones.Networking
     /// </summary>
     public class ServerSocketWs : IServerSocket, IUpdatable
     {
-        public event Action<IPeer> OnConnected;
-        public event Action<IPeer> OnDisconnected;
+        public event PeerActionHandler OnConnected;
+        public event PeerActionHandler OnDisconnected;
 
         private WebSocketServer _server;
 
@@ -83,7 +83,7 @@ namespace Barebones.Networking
                         OnConnected.Invoke(peer);
                 });
 
-                peer.OnDisconnect += OnDisconnected;
+                peer.Disconnected += OnDisconnected;
 
                 service.OnCloseEvent += reason =>
                 {

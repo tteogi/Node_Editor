@@ -31,7 +31,7 @@ public class MiniGameUi : MonoBehaviour
 
     public void OnPlayerSpawned(MiniPlayerController player)
     {
-        player.OnCoinsChanged += () =>
+        player.CoinsChanged += () =>
         {
             Coins.text = player.Coins.ToString();
         };

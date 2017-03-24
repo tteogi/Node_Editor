@@ -1,4 +1,5 @@
 ﻿using System;
+using Barebones.MasterServer;
 
 namespace Barebones.Networking
 {
@@ -7,10 +8,10 @@ namespace Barebones.Networking
     /// </summary>
     public class PacketHandler : IPacketHandler
     {
-        private readonly Action<IIncommingMessage> _handler;
+        private readonly IncommingMessageHandler _handler;
         private readonly short _opCode;
 
-        public PacketHandler(short opCode, Action<IIncommingMessage> handler)
+        public PacketHandler(short opCode, IncommingMessageHandler handler)
         {
             _opCode = opCode;
             _handler = handler;
@@ -23,6 +24,7 @@ namespace Barebones.Networking
 
         public void Handle(IIncommingMessage message)
         {
+
             _handler.Invoke(message);
         }
     }

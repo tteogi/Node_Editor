@@ -33,26 +33,124 @@ namespace Barebones.Networking
 
         private IIncommingMessage _timeoutMessage;
 
+        private Dictionary<Type, object> _extensions;
+
         protected BasePeer()
         {
             _data = new Dictionary<int, object>();
             _acks = new Dictionary<int, ResponseCallback>(30);
             _ackTimeoutQueue = new List<long[]>();
+            _extensions = new Dictionary<Type, object>();
+
             BTimer.Instance.OnTick += HandleAckDisposalTick;
 
             _timeoutMessage = new IncommingMessage(-1, 0, "Time out".ToBytes(), DeliveryMethod.Reliable, this)
             {
-                StatusCode = AckResponseStatus.Timeout
+                Status = ResponseStatus.Timeout
             };
         }
 
         public event Action<IIncommingMessage> OnMessage;
-        public event Action<IPeer> OnDisconnect;
+        public event PeerActionHandler Disconnected;
+
+        public IPeer Peer { get; private set; }
+
+        public void SendMessage(short opCode)
+        {
+            SendMessage(MessageHelper.Create(opCode), DeliveryMethod.Reliable);
+        }
+
+        public void SendMessage(short opCode, ISerializablePacket packet)
+        {
+            SendMessage(MessageHelper.Create(opCode, packet), DeliveryMethod.Reliable);
+        }
+
+        public void SendMessage(short opCode, ISerializablePacket packet, DeliveryMethod method)
+        {
+            SendMessage(MessageHelper.Create(opCode, packet), method);
+        }
+
+        public void SendMessage(short opCode, ISerializablePacket packet, ResponseCallback responseCallback)
+        {
+            var message = MessageHelper.Create(opCode, packet.ToBytes());
+            SendMessage(message, responseCallback);
+        }
+
+        public void SendMessage(short opCode, ISerializablePacket packet, ResponseCallback responseCallback, int timeoutSecs)
+        {
+            var message = MessageHelper.Create(opCode, packet.ToBytes());
+            SendMessage(message, responseCallback, timeoutSecs, DeliveryMethod.Reliable);
+        }
+
+        public void SendMessage(short opCode, ResponseCallback responseCallback)
+        {
+            SendMessage(MessageHelper.Create(opCode), responseCallback);
+        }
+
+        public void SendMessage(short opCode, byte[] data)
+        {
+            SendMessage(MessageHelper.Create(opCode, data), DeliveryMethod.Reliable);
+        }
 
         public void SendMessage(short opCode, byte[] data, ResponseCallback ackCallback)
         {
             var message = MessageHelper.Create(opCode, data);
             SendMessage(message, ackCallback);
+        }
+
+        public void SendMessage(short opCode, byte[] data, ResponseCallback responseCallback, int timeoutSecs)
+        {
+            var message = MessageHelper.Create(opCode, data);
+            SendMessage(message, responseCallback, timeoutSecs);
+        }
+
+        public void SendMessage(short opCode, string data)
+        {
+            SendMessage(MessageHelper.Create(opCode, data), DeliveryMethod.Reliable);
+        }
+
+        public void SendMessage(short opCode, string data, ResponseCallback responseCallback)
+        {
+            var message = MessageHelper.Create(opCode, data);
+            SendMessage(message, responseCallback);
+        }
+
+        public void SendMessage(short opCode, string data, ResponseCallback responseCallback, int timeoutSecs)
+        {
+            var message = MessageHelper.Create(opCode, data);
+            SendMessage(message, responseCallback, timeoutSecs);
+        }
+
+        public void SendMessage(short opCode, int data)
+        {
+            SendMessage(MessageHelper.Create(opCode, data), DeliveryMethod.Reliable);
+        }
+
+        public void SendMessage(short opCode, int data, ResponseCallback responseCallback)
+        {
+            var message = MessageHelper.Create(opCode, data);
+            SendMessage(message, responseCallback);
+        }
+
+        public void SendMessage(short opCode, int data, ResponseCallback responseCallback, int timeoutSecs)
+        {
+            var message = MessageHelper.Create(opCode, data);
+            SendMessage(message, responseCallback, timeoutSecs);
+        }
+
+        public void SendMessage(IMessage message)
+        {
+            SendMessage(message, DeliveryMethod.Reliable);
+        }
+
+        void IMsgDispatcher.SendMessage(IMessage message, ResponseCallback responseCallback)
+        {
+            SendMessage(message, responseCallback);
+        }
+
+        void IMsgDispatcher.SendMessage(IMessage message, ResponseCallback responseCallback, int timeoutSecs)
+        {
+            SendMessage(message, responseCallback, timeoutSecs);
         }
 
         /// <summary>
@@ -92,6 +190,27 @@ namespace Barebones.Networking
         {
             var obj = GetProperty(id);
             return obj ?? defaultValue;
+        }
+
+        public T AddExtension<T>(T extension)
+        {
+            _extensions[typeof(T)] = extension;
+            return extension;
+        }
+
+        public T GetExtension<T>()
+        {
+            object extension;
+            _extensions.TryGetValue(typeof(T), out extension);
+            if (extension == null)
+                return default(T);
+
+            return (T) extension;
+        }
+
+        public bool HasExtension<T>()
+        {
+            return _extensions.ContainsKey(typeof(T));
         }
 
         public void Dispose()
@@ -136,7 +255,7 @@ namespace Barebones.Networking
         {
             if (!IsConnected)
             {
-                responseCallback.Invoke(AckResponseStatus.NotConnected, null);
+                responseCallback.Invoke(ResponseStatus.NotConnected, null);
                 return -1;
             }
 
@@ -168,8 +287,8 @@ namespace Barebones.Networking
 
         public void NotifyDisconnectEvent()
         {
-            if (OnDisconnect != null)
-                OnDisconnect(this);
+            if (Disconnected != null)
+                Disconnected(this);
         }
 
         protected void NotifyMessageEvent(IIncommingMessage message)
@@ -195,7 +314,7 @@ namespace Barebones.Networking
             return id;
         }
 
-        protected void TriggerAck(int ackId, byte statusCode, IIncommingMessage message)
+        protected void TriggerAck(int ackId, ResponseStatus statusCode, IIncommingMessage message)
         {
             lock (_acks)
             {
@@ -232,7 +351,7 @@ namespace Barebones.Networking
                 if (message.AckRequestId.HasValue)
                 {
                     // We received a message which is a response to our ack request
-                    TriggerAck(message.AckRequestId.Value, message.StatusCode, message);
+                    TriggerAck(message.AckRequestId.Value, message.Status, message);
                     return;
                 }
             }
@@ -282,7 +401,7 @@ namespace Barebones.Networking
 
                 try
                 {
-                    CancelAck((int) a[0], AckResponseStatus.Timeout);
+                    CancelAck((int) a[0], ResponseStatus.Timeout);
                 }
                 catch (Exception e)
                 {
@@ -293,7 +412,7 @@ namespace Barebones.Networking
             });
         }
 
-        private void CancelAck(int ackId, byte responseCode)
+        private void CancelAck(int ackId, ResponseStatus responseCode)
         {
             lock (_acks)
             {

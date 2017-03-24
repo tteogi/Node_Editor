@@ -2,12 +2,14 @@
 
 namespace Barebones.Networking
 {
-    public delegate void ResponseCallback(byte status, IIncommingMessage response);
+    public delegate void IncommingMessageHandler(IIncommingMessage message);
+
+    public delegate void ResponseCallback(ResponseStatus status, IIncommingMessage response);
 
     /// <summary>
     ///     Represents connection peer
     /// </summary>
-    public interface IPeer : IDisposable
+    public interface IPeer : IDisposable, IMsgDispatcher
     {
         /// <summary>
         ///     Unique peer id
@@ -22,7 +24,7 @@ namespace Barebones.Networking
         /// <summary>
         ///     Invoked when peer disconnects
         /// </summary>
-        event Action<IPeer> OnDisconnect;
+        event PeerActionHandler Disconnected;
 
         /// <summary>
         ///     Invoked when peer receives a message
@@ -50,34 +52,9 @@ namespace Barebones.Networking
         ///     Sends a message to peer
         /// </summary>
         /// <param name="message">Message to send</param>
-        /// <param name="responseCallback">Callback method, which will be invoked when peer responds</param>
-        /// <param name="timeoutSecs">If peer fails to respons within this time frame, callback will be invoked with timeout status</param>
-        /// <returns></returns>
-        int SendMessage(IMessage message, ResponseCallback responseCallback, int timeoutSecs);
-
-        /// <summary>
-        ///     Sends a message to peer
-        /// </summary>
-        /// <param name="message">Message to send</param>
-        /// <param name="responseCallback">Callback method, which will be invoked when peer responds</param>
-        /// <returns></returns>
-        int SendMessage(IMessage message, ResponseCallback responseCallback);
-
-        /// <summary>
-        ///     Sends a message to peer
-        /// </summary>
-        /// <param name="message">Message to send</param>
         /// <param name="deliveryMethod">Delivery method</param>
         /// <returns></returns>
         void SendMessage(IMessage message, DeliveryMethod deliveryMethod);
-
-        /// <summary>
-        ///     Sends a message to peer
-        /// </summary>
-        /// <param name="opCode"></param>
-        /// <param name="data"></param>
-        /// <param name="ackCallback"></param>
-        void SendMessage(short opCode, byte[] data, ResponseCallback ackCallback);
 
         /// <summary>
         ///     Stores a property into peer
@@ -101,5 +78,21 @@ namespace Barebones.Networking
         /// <param name="defaultValue"></param>
         /// <returns></returns>
         object GetProperty(int id, object defaultValue);
+
+        /// <summary>
+        /// Adds an extension to this peer
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="extension"></param>
+        T AddExtension<T>(T extension);
+
+        /// <summary>
+        /// Retrieves an extension of this peer
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        T GetExtension<T>();
+
+        bool HasExtension<T>();
     }
 }

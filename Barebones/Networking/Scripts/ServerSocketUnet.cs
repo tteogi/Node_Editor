@@ -31,8 +31,8 @@ namespace Barebones.Networking
             _msgBuffer = new byte[NetworkMessage.MaxMessageSize];
         }
 
-        public event Action<IPeer> OnConnected;
-        public event Action<IPeer> OnDisconnected;
+        public event PeerActionHandler OnConnected;
+        public event PeerActionHandler OnDisconnected;
 
         public void Listen(int port)
         {

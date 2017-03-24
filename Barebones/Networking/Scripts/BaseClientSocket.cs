@@ -4,6 +4,17 @@
     {
         public IPeer Peer { get; set; }
 
+        public void SendMessage(short opCode)
+        {
+            var msg = MessageHelper.Create(opCode);
+            SendMessage(msg);
+        }
+
+        public void SendMessage(short opCode, ISerializablePacket packet)
+        {
+            SendMessage(opCode, packet, DeliveryMethod.Reliable);
+        }
+
         public void SendMessage(short opCode, ISerializablePacket packet, DeliveryMethod method)
         {
             var msg = MessageHelper.Create(opCode, packet.ToBytes());
@@ -20,6 +31,17 @@
         {
             var msg = MessageHelper.Create(opCode, packet.ToBytes());
             Peer.SendMessage(msg, responseCallback, timeoutSecs);
+        }
+
+        public void SendMessage(short opCode, ResponseCallback responseCallback)
+        {
+            var msg = MessageHelper.Create(opCode);
+            SendMessage(msg, responseCallback);
+        }
+
+        public void SendMessage(short opCode, byte[] data)
+        {
+            SendMessage(opCode, data, DeliveryMethod.Reliable);
         }
 
         public void SendMessage(short opCode, byte[] data, DeliveryMethod method)
@@ -40,6 +62,11 @@
             Peer.SendMessage(msg, responseCallback, timeoutSecs);
         }
 
+        public void SendMessage(short opCode, string data)
+        {
+            SendMessage(opCode, data, DeliveryMethod.Reliable);
+        }
+
         public void SendMessage(short opCode, string data, DeliveryMethod method)
         {
             var msg = MessageHelper.Create(opCode, data);
@@ -58,6 +85,11 @@
             Peer.SendMessage(msg, responseCallback, timeoutSecs);
         }
 
+        public void SendMessage(short opCode, int data)
+        {
+            SendMessage(opCode, data, DeliveryMethod.Reliable);
+        }
+
         public void SendMessage(short opCode, int data, DeliveryMethod method)
         {
             var msg = MessageHelper.Create(opCode, data);
@@ -74,6 +106,11 @@
         {
             var msg = MessageHelper.Create(opCode, data);
             Peer.SendMessage(msg, responseCallback, timeoutSecs);
+        }
+
+        public void SendMessage(IMessage message)
+        {
+            SendMessage(message, DeliveryMethod.Reliable);
         }
 
         public void SendMessage(IMessage message, DeliveryMethod method)

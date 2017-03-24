@@ -63,16 +63,16 @@ namespace Barebones.Networking
         /// <summary>
         ///     Message status code
         /// </summary>
-        public byte StatusCode { get; set; }
+        public ResponseStatus Status { get; set; }
 
         /// <summary>
         ///     Respond with a message
         /// </summary>
         /// <param name="message"></param>
         /// <param name="statusCode"></param>
-        public void Respond(IMessage message, byte statusCode = 0)
+        public void Respond(IMessage message, ResponseStatus statusCode = ResponseStatus.Default)
         {
-            message.StatusCode = statusCode;
+            message.Status = statusCode;
 
             if (AckResponseId.HasValue)
                 message.AckResponseId = AckResponseId.Value;
@@ -85,7 +85,7 @@ namespace Barebones.Networking
         /// </summary>
         /// <param name="data"></param>
         /// <param name="statusCode"></param>
-        public void Respond(byte[] data, byte statusCode = 0)
+        public void Respond(byte[] data, ResponseStatus statusCode = ResponseStatus.Default)
         {
             Respond(MessageHelper.Create(OpCode, data), statusCode);
         }
@@ -95,7 +95,7 @@ namespace Barebones.Networking
         /// </summary>
         /// <param name="data"></param>
         /// <param name="statusCode"></param>
-        public void Respond(ISerializablePacket packet, byte statusCode = 0)
+        public void Respond(ISerializablePacket packet, ResponseStatus statusCode = ResponseStatus.Default)
         {
             Respond(MessageHelper.Create(OpCode, packet.ToBytes()), statusCode);
         }
@@ -104,14 +104,19 @@ namespace Barebones.Networking
         ///     Respond with empty message and status code
         /// </summary>
         /// <param name="statusCode"></param>
-        public void Respond(byte statusCode = 0)
+        public void Respond(ResponseStatus statusCode = ResponseStatus.Default)
         {
             Respond(MessageHelper.Create(OpCode), statusCode);
         }
 
-        public void Respond(string message, byte statusCode = 0)
+        public void Respond(string message, ResponseStatus statusCode = ResponseStatus.Default)
         {
             Respond(message.ToBytes(), statusCode);
+        }
+
+        public void Respond(int response, ResponseStatus statusCode = ResponseStatus.Default)
+        {
+            Respond(MessageHelper.Create(OpCode, response), statusCode);
         }
 
         /// <summary>
@@ -165,12 +170,12 @@ namespace Barebones.Networking
         /// <typeparam name="T"></typeparam>
         /// <param name="packetToBeFilled"></param>
         /// <returns></returns>
-        public T DeserializePacket<T>(T packetToBeFilled) where T : ISerializablePacket
+        public T Deserialize<T>(T packetToBeFilled) where T : ISerializablePacket
         {
             return MessageHelper.Deserialize(_data, packetToBeFilled);
         }
 
-        public T DeserializeMessage<T>() where T : MessageBase, new()
+        public T Deserialize<T>() where T : MessageBase, new()
         {
             var reader = new NetworkReader(_data);
             return reader.ReadMessage<T>();

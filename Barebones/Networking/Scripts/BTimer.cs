@@ -12,7 +12,7 @@ namespace Barebones.Networking
 
         private static BTimer _instance;
 
-        private List<Action> _pendingActionsOnUpdate;
+        private List<Action> _mainThreadActions;
 
         /// <summary>
         /// Event, which is invoked every second
@@ -20,6 +20,8 @@ namespace Barebones.Networking
         public event Action<long> OnTick;
 
         public event Action ApplicationQuit;
+
+        private readonly object _mainThreadLock = new object();
 
         public static BTimer Instance
         {
@@ -37,7 +39,10 @@ namespace Barebones.Networking
         // Use this for initialization
         private void Awake()
         {
-            _pendingActionsOnUpdate = new List<Action>();
+            // Framework requires applications to run in background
+            Application.runInBackground = true;
+
+            _mainThreadActions = new List<Action>();
             _instance = this;
             DontDestroyOnLoad(this);
 
@@ -46,14 +51,17 @@ namespace Barebones.Networking
 
         void Update()
         {
-            if (_pendingActionsOnUpdate.Count > 0)
+            if (_mainThreadActions.Count > 0)
             {
-                foreach (var actions in _pendingActionsOnUpdate)
+                lock (_mainThreadLock)
                 {
-                    actions.Invoke();
-                }
+                    foreach (var actions in _mainThreadActions)
+                    {
+                        actions.Invoke();
+                    }
 
-                _pendingActionsOnUpdate.Clear();
+                    _mainThreadActions.Clear();
+                }
             }
         }
 
@@ -93,43 +101,22 @@ namespace Barebones.Networking
             callback.Invoke(timeoutSeconds > 0);
         }
 
-        ///// <summary>
-        ///// Waits a specified time interval and calls a callback, unlimited times,
-        ///// until coroutine is stoped manually
-        ///// </summary>
-        ///// <param name="intervalSecs"></param>
-        ///// <param name="callback"></param>
-        ///// <returns></returns>
-        //public static Coroutine StartTicking(float intervalSecs, Action callback)
-        //{
-        //    return Instance.StartCoroutine(DoTicking(intervalSecs, callback));
-        //}
-
-        //private static IEnumerator DoTicking(float interval, Action callback)
-        //{
-        //    while (true)
-        //    {
-        //        yield return new WaitForSecondsRealtime(interval);
-
-        //        try
-        //        {
-        //            callback.Invoke();
-        //        }
-        //        catch (Exception e)
-        //        {
-                    
-        //        }
-        //    }
-        //}
-
         public static void AfterSeconds(float time, Action callback)
         {
             Instance.StartCoroutine(Instance.StartWaitingSeconds(time, callback));
         }
 
-        public void ExecuteOnUpdate(Action action)
+        public static void ExecuteOnMainThread(Action action)
         {
-            _pendingActionsOnUpdate.Add(action);
+            Instance.OnMainThread(action);
+        }
+
+        public void OnMainThread(Action action)
+        {
+            lock (_mainThreadLock)
+            {
+                _mainThreadActions.Add(action);
+            }
         }
 
         private IEnumerator StartWaitingSeconds(float time, Action callback)

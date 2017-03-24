@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace Barebones.Networking
 {
@@ -56,7 +57,8 @@ namespace Barebones.Networking
                     pointer += 4;
 
                     var statusCode = buffer[pointer];
-                    message.StatusCode = statusCode; // TODO look into not exposing status code / ackRequestId
+
+                    message.Status = (ResponseStatus) statusCode; // TODO look into not exposing status code / ackRequestId
                     pointer++;
                 }
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Barebones.Networking
 {
@@ -19,6 +20,14 @@ namespace Barebones.Networking
             if (!protocol.Equals("ws") && !protocol.Equals("wss"))
                 throw new ArgumentException("Unsupported protocol: " + protocol);
         }
+
+
+#if !UNITY_EDITOR && (UNITY_WEBGL || !UNITY_WEBPLAYER)
+        private bool SuportsThreads { get { return false; } }
+
+#else
+        private bool SuportsThreads { get { return true; } }
+#endif
 
         public void SendString(string str)
         {
@@ -114,7 +123,6 @@ namespace Barebones.Networking
 
         public IEnumerator Connect()
         {
-            Logs.Trace("Connecting to server: " + mUrl);
             m_Socket = new WebSocketSharp.WebSocket(mUrl.ToString());
             m_Socket.OnMessage += (sender, e) =>
             {
@@ -123,7 +131,6 @@ namespace Barebones.Networking
             m_Socket.OnOpen += (sender, e) =>
             {
                 m_IsConnected = true;
-                Logs.Trace("Connected to server: " + mUrl);
             };
             m_Socket.OnError += (sender, e) =>
             {
@@ -131,7 +138,18 @@ namespace Barebones.Networking
                 Logs.Error(e.Message);
             };
             m_Socket.OnClose += (sender, args) => m_IsConnected = false;
-            m_Socket.Connect();
+
+            if (SuportsThreads)
+            {
+                ThreadPool.QueueUserWorkItem((status) =>
+                {
+                    m_Socket.Connect();
+                });
+            }
+            else
+            {
+                m_Socket.Connect();
+            }
 
             IsConnecting = true;
             while (!m_IsConnected && m_Error == null)

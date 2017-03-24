@@ -48,7 +48,7 @@ public class MiniPlayerController : NetworkBehaviour
 
     public SpriteRenderer Weapon;
 
-    public event Action OnCoinsChanged;
+    public event Action CoinsChanged;
 
     public GameObject Flag;
 
@@ -96,12 +96,6 @@ public class MiniPlayerController : NetworkBehaviour
             return;
 
         UpdateMovement();
-
-        if (Input.GetKeyUp(KeyCode.K))
-        {
-            Logs.Debug("About");
-            FindObjectOfType<NetworkManager>().client.connection.Send(UnetMsgType.LeaveGame, new EmptyMessage());
-        }
 
         // Input
         if (MiniGameUi.Instance != null && MiniGameUi.Instance.IsAutoWalk)
@@ -195,8 +189,8 @@ public class MiniPlayerController : NetworkBehaviour
         // Update value on client
         Coins = coins;
 
-        if (OnCoinsChanged != null)
-            OnCoinsChanged.Invoke();
+        if (CoinsChanged != null)
+            CoinsChanged.Invoke();
     }
 
     private void OnTriggerEnter(Collider collider)
@@ -210,8 +204,8 @@ public class MiniPlayerController : NetworkBehaviour
             Coins++;
 
             // Invoke event on server
-            if (OnCoinsChanged != null)
-                OnCoinsChanged.Invoke();
+            if (CoinsChanged != null)
+                CoinsChanged.Invoke();
         }
         
     }

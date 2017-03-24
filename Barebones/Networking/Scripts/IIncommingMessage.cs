@@ -46,7 +46,7 @@ namespace Barebones.Networking
         /// <summary>
         ///     Message status code
         /// </summary>
-        byte StatusCode { get; }
+        ResponseStatus Status { get; }
 
         /// <summary>
         ///     Returns true if message contains any data
@@ -58,32 +58,39 @@ namespace Barebones.Networking
         /// </summary>
         /// <param name="message"></param>
         /// <param name="statusCode"></param>
-        void Respond(IMessage message, byte statusCode = 0);
+        void Respond(IMessage message, ResponseStatus statusCode = ResponseStatus.Default);
 
         /// <summary>
         ///     Respond with data (message is created internally)
         /// </summary>
         /// <param name="data"></param>
         /// <param name="statusCode"></param>
-        void Respond(byte[] data, byte statusCode = 0);
+        void Respond(byte[] data, ResponseStatus statusCode = ResponseStatus.Default);
 
         /// <summary>
         ///     Respond with data (message is created internally)
         /// </summary>
         /// <param name="data"></param>
         /// <param name="statusCode"></param>
-        void Respond(ISerializablePacket packet, byte statusCode = 0);
+        void Respond(ISerializablePacket packet, ResponseStatus statusCode = ResponseStatus.Default);
 
         /// <summary>
         ///     Respond with empty message and status code
         /// </summary>
         /// <param name="statusCode"></param>
-        void Respond(byte statusCode = 0);
+        void Respond(ResponseStatus statusCode);
 
         /// <summary>
         ///     Respond with string message
         /// </summary>
-        void Respond(string message, byte statusCode = 0);
+        void Respond(string message, ResponseStatus statusCode = ResponseStatus.Default);
+
+        /// <summary>
+        /// Respond with integer
+        /// </summary>
+        /// <param name="response"></param>
+        /// <param name="statusCode"></param>
+        void Respond(int response, ResponseStatus statusCode = ResponseStatus.Default);
 
         /// <summary>
         ///     Returns contents of this message. Mutable
@@ -116,14 +123,14 @@ namespace Barebones.Networking
         /// <typeparam name="T"></typeparam>
         /// <param name="packetToBeFilled"></param>
         /// <returns></returns>
-        T DeserializePacket<T>(T packetToBeFilled) where T : ISerializablePacket;
+        T Deserialize<T>(T packetToBeFilled) where T : ISerializablePacket;
 
         /// <summary>
         /// Deserializes as a standard uNet message
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        T DeserializeMessage<T>() where T : MessageBase, new();
+        T Deserialize<T>() where T : MessageBase, new();
 
         /// <summary>
         ///     Uses content of the message to regenerate list of packets

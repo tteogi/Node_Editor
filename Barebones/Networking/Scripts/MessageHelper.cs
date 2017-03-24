@@ -133,6 +133,11 @@ namespace Barebones.Networking
             return _factory.Create(opCode, _writer.ToArray());
         }
 
+        public static IMessage Create(short opCode, ISerializablePacket packet)
+        {
+            return Create(opCode, packet.ToBytes());
+        }
+
         /// <summary>
         ///     Reconstructs message data into <see cref="IIncommingMessage" />
         /// </summary>

@@ -21,21 +21,31 @@ namespace Barebones.Networking
         bool IsConnecting { get; }
 
         /// <summary>
+        /// Ip of the server to which we're connected
+        /// </summary>
+        string ConnectionIp { get; }
+
+        /// <summary>
+        /// Port of the server to which we're connected
+        /// </summary>
+        int ConnectionPort { get; }
+
+        /// <summary>
         /// Event, which is invoked when we successfully 
         /// connect to another socket
         /// </summary>
-        event Action OnConnected;
+        event Action Connected;
 
         /// <summary>
         /// Event, which is invoked when we are
         /// disconnected from another socket
         /// </summary>
-        event Action OnDisconnected;
+        event Action Disconnected;
 
         /// <summary>
         /// Event, invoked when connection status changes
         /// </summary>
-        event Action<ConnectionStatus> OnStatusChange;
+        event Action<ConnectionStatus> StatusChanged;
 
         /// <summary>
         /// Starts connecting to another socket
@@ -70,11 +80,19 @@ namespace Barebones.Networking
         void WaitConnection(Action<IClientSocket> connectionCallback);
 
         /// <summary>
-        /// Adds a package handler, which will be invoked when a message of
-        /// specific operation code is received
+        /// Adds a listener, which is invoked when connection is established,
+        /// or instantly, if already connected and  <see cref="invokeInstantlyIfConnected"/> 
+        /// is true
         /// </summary>
-        [Obsolete("Use SetHandler")]
-        IPacketHandler AddHandler(IPacketHandler handler);
+        /// <param name="callback"></param>
+        /// <param name="invokeInstantlyIfConnected"></param>
+        void AddConnectionListener(Action callback, bool invokeInstantlyIfConnected = true);
+
+        /// <summary>
+        /// Removes connection listener
+        /// </summary>
+        /// <param name="callback"></param>
+        void RemoveConnectionListener(Action callback);
 
         /// <summary>
         /// Adds a packet handler, which will be invoked when a message of
@@ -86,7 +104,7 @@ namespace Barebones.Networking
         /// Adds a packet handler, which will be invoked when a message of
         /// specific operation code is received
         /// </summary>
-        IPacketHandler SetHandler(short opCode, Action<IIncommingMessage> handlerMethod);
+        IPacketHandler SetHandler(short opCode, IncommingMessageHandler handlerMethod);
 
         /// <summary>
         /// Removes the packet handler, but only if this exact handler

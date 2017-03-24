@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace Barebones.Networking
 {
@@ -11,13 +12,13 @@ namespace Barebones.Networking
         public Message(short opCode) : this(opCode, new byte[0])
         {
             OpCode = opCode;
-            StatusCode = 0;
+            Status = 0;
         }
 
         public Message(short opCode, byte[] data)
         {
             OpCode = opCode;
-            StatusCode = 0;
+            Status = 0;
             SetBinary(data);
         }
 
@@ -60,7 +61,7 @@ namespace Barebones.Networking
         /// <summary>
         ///     Status code of the message
         /// </summary>
-        public byte StatusCode { get; set; }
+        public ResponseStatus Status { get; set; }
 
         public IMessage SetBinary(byte[] data)
         {
@@ -112,7 +113,7 @@ namespace Barebones.Networking
                 pointer += 4;
 
                 // Status code
-                messagePacket[pointer] = StatusCode;
+                messagePacket[pointer] = (byte)Status;
                 pointer++;
             }
 

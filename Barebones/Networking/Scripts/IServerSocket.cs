@@ -2,17 +2,19 @@
 
 namespace Barebones.Networking
 {
+    public delegate void PeerActionHandler(IPeer peer);
+
     public interface IServerSocket
     {
         /// <summary>
         /// Invoked, when a client connects to this socket
         /// </summary>
-        event Action<IPeer> OnConnected;
+        event PeerActionHandler OnConnected;
 
         /// <summary>
         /// Invoked, when client disconnects from this socket
         /// </summary>
-        event Action<IPeer> OnDisconnected;
+        event PeerActionHandler OnDisconnected;
 
         /// <summary>
         /// Opens the socket and starts listening to a given port

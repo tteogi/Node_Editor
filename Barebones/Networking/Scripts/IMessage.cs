@@ -39,7 +39,7 @@
         /// <summary>
         ///     Status code of the message
         /// </summary>
-        byte StatusCode { get; set; }
+        ResponseStatus Status { get; set; }
 
         /// <summary>
         ///     Overrides current data

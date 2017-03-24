@@ -46,18 +46,18 @@ namespace Barebones.Networking
         /// Event, which is invoked when we successfully 
         /// connect to another socket
         /// </summary>
-        public event Action OnConnected;
+        public event Action Connected;
 
         /// <summary>
         /// Event, which is invoked when we are
         /// disconnected from another socket
         /// </summary>
-        public event Action OnDisconnected;
+        public event Action Disconnected;
 
         /// <summary>
         /// Event, invoked when connection status changes
         /// </summary>
-        public event Action<ConnectionStatus> OnStatusChange;
+        public event Action<ConnectionStatus> StatusChanged;
 
         /// <summary>
         /// Returns true, if we are connected to another socket
@@ -77,15 +77,19 @@ namespace Barebones.Networking
             get { return _status; }
             private set
             {
-                if ((_status != value) && (OnStatusChange != null))
+                if ((_status != value) && (StatusChanged != null))
                 {
                     _status = value;
-                    OnStatusChange.Invoke(_status);
+                    StatusChanged.Invoke(_status);
                     return;
                 }
                 _status = value;
             }
         }
+
+        public string ConnectionIp { get; private set; }
+
+        public int ConnectionPort { get; private set; }
 
         /// <summary>
         /// Starts connecting to another socket
@@ -108,6 +112,8 @@ namespace Barebones.Networking
         /// <returns></returns>
         public IClientSocket Connect(string ip, int port, int timeoutMillis)
         {
+            ConnectionIp = ip;
+            ConnectionPort = port;
             NetworkTransport.Init();
             _stopConnectingTick = Environment.TickCount + timeoutMillis;
             _ip = ip;
@@ -131,13 +137,37 @@ namespace Barebones.Networking
         }
 
         /// <summary>
-        ///     Invokes a callback after a successfull connection,
+        ///     Invokes a callback after a successful connection,
         ///     instantly if connected, or after the timeout, if failed to connect
         /// </summary>
         /// <param name="connectionCallback"></param>
         public void WaitConnection(Action<IClientSocket> connectionCallback)
         {
             WaitConnection(connectionCallback, 10);
+        }
+
+        /// <summary>
+        /// Adds a listener, which is invoked when connection is established,
+        /// or instantly, if already connected and  <see cref="invokeInstantlyIfConnected"/> 
+        /// is true
+        /// </summary>
+        /// <param name="callback"></param>
+        /// <param name="invokeInstantlyIfConnected"></param>
+        public void AddConnectionListener(Action callback, bool invokeInstantlyIfConnected = true)
+        {
+            Connected += callback;
+
+            if (IsConnected && invokeInstantlyIfConnected)
+                callback.Invoke();
+        }
+
+        /// <summary>
+        /// Removes connection listener
+        /// </summary>
+        /// <param name="callback"></param>
+        public void RemoveConnectionListener(Action callback)
+        {
+            Connected -= callback;
         }
 
         /// <summary>
@@ -153,21 +183,27 @@ namespace Barebones.Networking
             }
 
             var isConnected = false;
+            var timedOut = false;
             Action onConnected = null;
             onConnected = () =>
             {
-                OnConnected -= onConnected;
+                Connected -= onConnected;
                 isConnected = true;
-                connectionCallback.Invoke(this);
+
+                if (!timedOut)
+                {
+                    connectionCallback.Invoke(this);
+                }
             };
 
-            OnConnected += onConnected;
+            Connected += onConnected;
 
             BTimer.AfterSeconds(timeoutSeconds, () =>
             {
                 if (!isConnected)
                 {
-                    OnConnected -= onConnected;
+                    timedOut = true;
+                    Connected -= onConnected;
                     connectionCallback.Invoke(this);
                 }
             });
@@ -194,7 +230,7 @@ namespace Barebones.Networking
         /// Adds a packet handler, which will be invoked when a message of
         /// specific operation code is received
         /// </summary>
-        public IPacketHandler SetHandler(short opCode, Action<IIncommingMessage> handlerMethod)
+        public IPacketHandler SetHandler(short opCode, IncommingMessageHandler handlerMethod)
         {
             var handler = new PacketHandler(opCode, handlerMethod);
             SetHandler(handler);
@@ -272,6 +308,9 @@ namespace Barebones.Networking
                 int channelId;
                 int receivedSize;
 
+                if (_socketId == -1)// EMIL Fix
+                    break;
+
                 networkEvent = NetworkTransport.ReceiveFromHost(_socketId, out connectionId, out channelId, _msgBuffer,
                     _msgBuffer.Length, out receivedSize, out error);
 
@@ -318,6 +357,7 @@ namespace Barebones.Networking
 
             Status = ConnectionStatus.Disconnected;
             IsConnected = false;
+            _socketId = -1; //EMIL Fix
 
             if (_serverPeer != null)
             {
@@ -325,8 +365,8 @@ namespace Barebones.Networking
                 _serverPeer.NotifyDisconnectEvent();
             }
 
-            if (OnDisconnected != null)
-                OnDisconnected.Invoke();
+            if (Disconnected != null)
+                Disconnected.Invoke();
         }
 
         private void HandleData(int connectionId, int channelId, int receivedSize, byte error)
@@ -357,8 +397,8 @@ namespace Barebones.Networking
             _serverPeer.SetIsConnected(true);
             _serverPeer.OnMessage += HandleMessage;
 
-            if (OnConnected != null)
-                OnConnected.Invoke();
+            if (Connected != null)
+                Connected.Invoke();
         }
 
         private void HandleMessage(IIncommingMessage message)
@@ -373,7 +413,7 @@ namespace Barebones.Networking
                 else if (message.IsExpectingResponse)
                 {
                     Logs.Error("Connection is missing a handler. OpCode: " + message.OpCode);
-                    message.Respond(AckResponseStatus.Error);
+                    message.Respond(ResponseStatus.Error);
                 }
             }
             catch (Exception e)
@@ -391,7 +431,7 @@ namespace Barebones.Networking
 
                 try
                 {
-                    message.Respond(AckResponseStatus.Error);
+                    message.Respond(ResponseStatus.Error);
                 }
                 catch (Exception exception)
                 {
