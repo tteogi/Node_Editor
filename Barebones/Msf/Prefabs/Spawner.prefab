@@ -54,7 +54,13 @@ MonoBehaviour:
   LogLevel: 0
   SpawnControllerLogLevel: 0
   DefaultMachineIp: 127.0.0.1
-  DefaultExePath: 
+  DefaultExePath: D:\build\Sos.exe
+  DefaultSpawnInBatchmode: 0
+  MaxSpawnedProcesses: 20
+  SpawnWebglServers: 0
   DontDestroyIfStarted: 1
   KillProcessesWhenSpawnerQuits: 1
   IsSpawnerStarted: 0
+  AutoStartInEditor: 1
+  OverrideExePathInEditor: 1
+  ExePathFromEditor: D:\build\Sos.exe
