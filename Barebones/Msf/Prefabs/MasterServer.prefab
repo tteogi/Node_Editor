@@ -499,8 +499,8 @@ MonoBehaviour:
   LookForModules: 1
   LookInChildrenOnly: 0
   Permissions: []
-  Port: 5000
-  LogLevel: 3
+  Port: 1155
+  LogLevel: 0
   AutoStartInEditor: 1
 --- !u!114 &114596019941455580
 MonoBehaviour:
