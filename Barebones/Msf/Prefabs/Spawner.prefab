@@ -53,8 +53,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   LogLevel: 0
   SpawnControllerLogLevel: 0
-  DefaultMachineIp: 127.0.0.1
-  DefaultExePath: D:\build\Sos.exe
+  DefaultMachineIp: 192.168.100.128
+  DefaultExePath: C:\Work\Saladbowl\Builds\Sos.exe
   DefaultSpawnInBatchmode: 0
   MaxSpawnedProcesses: 20
   SpawnWebglServers: 0
@@ -63,4 +63,4 @@ MonoBehaviour:
   IsSpawnerStarted: 0
   AutoStartInEditor: 1
   OverrideExePathInEditor: 1
-  ExePathFromEditor: D:\build\Sos.exe
+  ExePathFromEditor: C:\Work\Saladbowl\Builds\Sos.exe
